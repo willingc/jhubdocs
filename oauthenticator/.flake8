@@ -1,0 +1,4 @@
+[flake8]
+select = F
+ignore = E,W,C
+exclude = __init__.py
