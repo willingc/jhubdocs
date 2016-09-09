@@ -1,6 +1,0 @@
-name: jhubdocs
-type: sphinx
-conda:
-    file: environment.yml
-python:
-  version: 3

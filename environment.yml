@@ -1,9 +1,0 @@
-name: jhubdocs
-channels:
-  - conda-forge
-dependencies:
-- python=3
-- sphinx>=1.3.6
-- sphinx_rtd_theme
-- pip:
-    - recommonmark==0.4.0
