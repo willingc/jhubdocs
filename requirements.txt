@@ -1,3 +1,2 @@
 sphinx
 recommonmark
--r jupyterhub/docs/requirements.txt
