@@ -1,0 +1,485 @@
+# see me at: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default
+swagger: '2.0'
+info:
+  title: JupyterHub
+  description: The REST API for JupyterHub
+  version: 0.7.0
+  license:
+    name: BSD-3-Clause
+schemes:
+  - http
+securityDefinitions:
+  token:
+    type: apiKey
+    name: Authorization
+    in: header
+security:
+  - token: []
+basePath: /hub/api/
+produces:
+  - application/json
+consumes:
+  - application/json
+paths:
+  /:
+    get:
+      summary: See the version of JupyterHub itself
+      description: |
+        This endpoint is not authenticated,
+        so clients can identify the version of JupyterHub before setting up authentication.
+      responses:
+        '200':
+          description: The version of JupyterHub itself
+          schema:
+            type: object
+            properties:
+              version:
+                type: string
+                description: The version of JupyterHub itself
+  /info:
+    get:
+      summary: Get detailed info about JupyterHub
+      description: |
+        Detailed information about JupyterHub,
+        including information about Python, JupyterHub's version,
+        and what Authenticators and Spawners are in use.
+      responses:
+        '200':
+          description: Detailed JupyterHub info
+          schema:
+            type: object
+            properties:
+              version:
+                type: string
+                description: The version of JupyterHub itself
+              python:
+                type: string
+                description: The version of Python, as returned by sys.version
+              sys_executable:
+                type: string
+                description: The path to sys.executable running JupyterHub
+              authenticator:
+                type: object
+                properties:
+                  class:
+                    type: string
+                    description: The Python class currently in use
+                  version:
+                    type: string
+                    description: The version of the package providing the Authenticator class
+              spawner:
+                type: object
+                properties:
+                  class:
+                    type: string
+                    description: The Python class currently in use for spawning single-user servers
+                  version:
+                    type: string
+                    description: The version of the package providing the Spawner class
+  /users:
+    get:
+      summary: List users
+      responses:
+        '200':
+          description: The user list
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/User'
+    post:
+      summary: Create multiple users
+      parameters:
+        - name: data
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              usernames:
+                type: array
+                description: list of usernames to create
+                items:
+                  type: string
+              admin:
+                description: whether the created users should be admins
+                type: boolean
+      responses:
+        '201':
+          description: The users have been created
+          schema:
+            type: array
+            description: The created users
+            items:
+              $ref: '#/definitions/User'
+  /users/{name}:
+    get:
+      summary: Get a user by name
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: The User model
+          schema:
+            $ref: '#/definitions/User'
+    post:
+      summary: Create a single user
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+      responses:
+        '201':
+          description: The user has been created
+          schema:
+            $ref: '#/definitions/User'
+    delete:
+      summary: Delete a user
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: The user has been deleted
+    patch:
+      summary: Modify a user
+      description: Change a user's name or admin status
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+        - name: data
+          in: body
+          required: true
+          description: Updated user info. At least one of name and admin is required.
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                description: the new name (optional)
+              admin:
+                type: boolean
+                description: update admin (optional)
+      responses:
+        '200':
+          description: The updated user info
+          schema:
+            $ref: '#/definitions/User'
+  /users/{name}/server:
+    post:
+      summary: Start a user's server
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+      responses:
+        '201':
+          description: The server has started
+        '202':
+          description: The server has been requested, but has not yet started
+    delete:
+      summary: Stop a user's server
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: The server has stopped
+        '202':
+          description: The server has been asked to stop, but is taking a while
+  /users/{name}/admin-access:
+    post:
+      summary: Grant an admin access to this user's server
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Sets a cookie granting the requesting admin access to the user's server
+  /groups:
+    get:
+      summary: List groups
+      responses:
+        '200':
+          description: The list of groups
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Group'
+  /groups/{name}:
+    get:
+      summary: Get a group by name
+      parameters:
+        - name: name
+          description: group name
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: The group model
+          schema:
+            $ref: '#/definitions/Group'
+    post:
+      summary: Create a group
+      parameters:
+        - name: name
+          description: group name
+          in: path
+          required: true
+          type: string
+      responses:
+        '201':
+          description: The group has been created
+          schema:
+            $ref: '#/definitions/Group'
+    delete:
+      summary: Delete a group
+      parameters:
+        - name: name
+          description: group name
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: The group has been deleted
+  /groups/{name}/users:
+    post:
+      summary: add users to a group
+      parameters:
+        - name: name
+          description: group name
+          in: path
+          required: true
+          type: string
+        - name: data
+          in: body
+          required: true
+          description: The users to add to the group
+          schema:
+            type: object
+            properties:
+              users:
+                type: array
+                description: List of usernames to add to the group
+                items:
+                  type: string
+      responses:
+        '200':
+          description: The users have been added to the group
+          schema:
+            $ref: '#/definitions/Group'
+    delete:
+      summary: Remove users from a group
+      parameters:
+        - name: name
+          description: group name
+          in: path
+          required: true
+          type: string
+        - name: data
+          in: body
+          required: true
+          description: The users to add to the group
+          schema:
+            type: object
+            properties:
+              users:
+                type: array
+                description: List of usernames to add to the group
+                items:
+                  type: string
+      responses:
+        '200':
+          description: The users have been removed from the group
+  /services:
+    get:
+      summary: List services
+      responses:
+        '200':
+          description: The service list
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Service'
+  /services/{name}:
+    get:
+      summary: Get a service by name
+      parameters:
+        - name: name
+          description: service name
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: The Service model
+          schema:
+            $ref: '#/definitions/Service'
+  /proxy:
+    get:
+      summary: Get the proxy's routing table
+      description: A convenience alias for getting the info directly from the proxy
+      responses:
+        '200':
+          description: Routing table
+          schema:
+            type: object
+            description: configurable-http-proxy routing table (see CHP docs for details)
+    post:
+      summary: Force the Hub to sync with the proxy
+      responses:
+        '200':
+          description: Success
+    patch:
+      summary: Tell the Hub about a new proxy
+      description: If you have started a new proxy and would like the Hub to switch over to it, this allows you to notify the Hub of the new proxy.
+      parameters:
+        - name: data
+          in: body
+          required: true
+          description: Any values that have changed for the new proxy. All keys are optional.
+          schema:
+            type: object
+            properties:
+              ip:
+                type: string
+                description: IP address of the new proxy
+              port:
+                type: string
+                description: Port of the new proxy
+              protocol:
+                type: string
+                description: Protocol of new proxy, if changed
+              auth_token:
+                type: string
+                description: CONFIGPROXY_AUTH_TOKEN for the new proxy
+      responses:
+        '200':
+          description: Success
+  /authorizations/token/{token}:
+    get:
+      summary: Identify a user from an API token
+      parameters:
+      - name: token
+        in: path
+        required: true
+        type: string
+      responses:
+        '200':
+          description: The user identified by the API token
+          schema:
+            $ref: '#/definitions/User'
+  /authorizations/cookie/{cookie_name}/{cookie_value}:
+    get:
+      summary: Identify a user from a cookie
+      description: Used by single-user servers to hand off cookie authentication to the Hub
+      parameters:
+      - name: cookie_name
+        in: path
+        required: true
+        type: string
+      - name: cookie_value
+        in: path
+        required: true
+        type: string
+      responses:
+        '200':
+          description: The user identified by the cookie
+          schema:
+            $ref: '#/definitions/User'
+  /shutdown:
+    post:
+      summary: Shutdown the Hub
+      parameters:
+        - name: proxy
+          in: body
+          type: boolean
+          description: Whether the proxy should be shutdown as well (default from Hub config)
+        - name: servers
+          in: body
+          type: boolean
+          description: Whether users's servers should be shutdown as well (default from Hub config)
+      responses:
+        '200':
+          description: Hub has shutdown
+definitions:
+  User:
+    type: object
+    properties:
+      name:
+        type: string
+        description: The user's name
+      admin:
+        type: boolean
+        description: Whether the user is an admin
+      groups:
+        type: array
+        description: The names of groups of which this user is a member
+        items:
+          type: string
+      server:
+        type: string
+        description: The user's server's base URL, if running; null if not.
+      pending:
+        type: string
+        enum: ["spawn", "stop"]
+        description: The currently pending action, if any
+      last_activity:
+        type: string
+        format: date-time
+        description: Timestamp of last-seen activity from the user
+  Group:
+    type: object
+    properties:
+      name:
+        type: string
+        description: The group's name
+      users:
+        type: array
+        description: The names of users who are members of this group
+        items:
+          type: string
+  Service:
+    type: object
+    properties:
+      name:
+        type: string
+        description: The service's name
+      admin:
+        type: boolean
+        description: Whether the service is an admin
+      url:
+        type: string
+        description: The internal url where the service is running
+      prefix:
+        type: string
+        description: The proxied URL prefix to the service's url
+      pid:
+        type: number
+        description: The PID of the service process (if managed)
+      command:
+        type: array
+        description: The command used to start the service (if managed)
+        items:
+          type: string
