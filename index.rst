@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to JupyterHub Federated Docs's documentation!
-=====================================================
+Welcome to JupyterHub Federated Docs
+====================================
 
 Contents:
 
@@ -13,6 +13,9 @@ Contents:
 
    jupyterhub/docs/source/index
    configurable-http-proxy/README.md
+   ldapauthenticator/README.md
+   oauthenticator/README.md
+
 
 Indices and tables
 ==================
