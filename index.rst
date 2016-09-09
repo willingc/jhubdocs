@@ -9,7 +9,7 @@ Welcome to JupyterHub Federated Docs's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    jupyterhub/docs/source/index
    configurable-http-proxy/README.md
