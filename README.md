@@ -1,6 +1,6 @@
 #jhubdocs
 
-A prototype of federated docs for the JupyterHub organization
+A prototype "proof of concept" of federated docs for the JupyterHub organization
 
 **Note: This is not the official JupyterHub documentation.**
 
