@@ -1,0 +1,34 @@
+---
+
+- name: make sure base exists
+  file: path={{nbgrader_base_dir}}/ state={{item}} owner={{nbgrader_owner}} mode=0700
+  become: true
+  with_items:
+    - directory
+    - touch
+
+- name: make sure subdirectories exist
+  file: path={{nbgrader_base_dir}}/{{item}}/ state=directory owner={{nbgrader_owner}} mode=0700
+  become: true
+  with_items:
+    - source
+    - release
+    - feedback
+    - autograded
+    - submitted
+
+- name: install nbgrader config file
+  template: "src=nbgrader_config.py.j2 dest={{nbgrader_base_dir}}/nbgrader_config.py owner={{nbgrader_owner}} mode=700"
+  become: true
+
+- name: install supervisor config for nbgrader
+  template: "src=nbgrader.conf.j2 dest=/etc/supervisor/conf.d/nbgrader_{{nbgrader_course_id}}.conf owner=root group=root mode='0600' backup=yes"
+  become: true
+
+- name: load nbgrader supervisor config
+  supervisorctl: name=nbgrader_{{nbgrader_course_id}} state=present
+  become: true
+
+- name: start nbgrader with supervisor
+  supervisorctl: name=nbgrader_{{nbgrader_course_id}} state=restarted
+  become: true
