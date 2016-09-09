@@ -6,6 +6,10 @@
 Welcome to JupyterHub Federated Docs
 ====================================
 
+.. note:: This is a documentation development project. Please refer to the
+          official docs on readthedocs.io for each JupyterHub project.
+
+
 Contents:
 
 .. toctree::
@@ -15,7 +19,10 @@ Contents:
    configurable-http-proxy/README.md
    ldapauthenticator/README.md
    oauthenticator/README.md
-
+   batchspawner/README.md
+   dockerspawner/README.md
+   sudospawner/README.md
+   systemdspawner/README.md
 
 Indices and tables
 ==================
