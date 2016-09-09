@@ -1,0 +1,8 @@
+{
+  "eqeqeq": true,
+  "devel": true,
+  "forin": true,
+  "latedef": true,
+  "node": true,
+  "undef": true
+}
