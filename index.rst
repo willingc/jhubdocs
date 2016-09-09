@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to JupyterHub Federated Docs
-====================================
+JupyterHub Federated Docs
+=========================
 
 .. note:: This is a documentation development project. Please refer to the
           official docs on readthedocs.io for each JupyterHub project.
