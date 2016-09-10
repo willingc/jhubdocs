@@ -1,8 +1,4 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
-# JupyterHub Federated Docs documentation build configuration file, created by
-# sphinx-quickstart on Fri Sep  9 10:23:50 2016.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -12,21 +8,15 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
 import os
 import sys
-sys.path.insert(0, os.path.abspath('.'))
 
-import cloud_sptheme
-
-# Needed for conversion from markdown to html
-import recommonmark.parser
+sys.path.insert(0, os.path.dirname(__file__))
 
 # -- General configuration ------------------------------------------------
+
+# Documentation is being built on readthedocs, this will be true.
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
@@ -42,6 +32,9 @@ extensions = [
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
+
+# Needed for conversion from markdown to html
+import recommonmark.parser
 
 # Jupyter uses recommonmark's parser to convert markdown
 source_parsers = {
@@ -61,9 +54,9 @@ source_suffix = ['.rst', '.md']
 master_doc = 'index'
 
 # General information about the project.
-project = 'JupyterHub Federated Docs'
-copyright = '2016, Carol Willing'
-author = 'Carol Willing'
+project = u'JupyterHub Federated Docs'
+copyright = u'2016, Carol Willing'
+author = u'Carol Willing'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -79,7 +72,7 @@ release = '0.1'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+#language = None
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -120,28 +113,26 @@ pygments_style = 'sphinx'
 # A list of ignored prefixes for module index sorting.
 # modindex_common_prefix = []
 
-# If true, keep warnings as "system message" paragraphs in the built documents.
-# keep_warnings = False
-
-# If true, `todo` and `todoList` produce output, else they produce nothing.
-todo_include_todos = False
-
 
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'cloud'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_theme_options = { "roottarget": "index" }
 
-# Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = [cloud_sptheme.get_theme_dir()]
+if not on_rtd:
+    import cloud_sptheme as csp
+
+    html_theme = 'cloud'
+    html_theme_options = { "roottarget": "index" }
+
+    # Add any paths that contain custom themes here, relative to this directory.
+    html_theme_path = [cloud_sptheme.get_theme_dir()]
 
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
@@ -353,14 +344,3 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
-
-# # Read The Docs
-# # on_rtd is whether we are on readthedocs.org, this line of code grabbed from docs.readthedocs.org
-# on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-#
-# if not on_rtd:  # only import and set the theme if we're building docs locally
-#     import cloud_sptheme
-#     html_theme = 'cloud'
-#     html_theme_path = [cloud_sptheme.get_theme_dir()]
-#     html_theme_options = { "roottarget": "index" }
-# # otherwise, readthedocs.org uses their theme by default, so no need to specify it
