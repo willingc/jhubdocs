@@ -26,7 +26,6 @@ Contents:
    jupyterhub-deploy-docker/README.md
    jupyterhub-deploy-hpc/README.md
    jupyterhub-deploy-teaching/docs/index
-   jupyterhub-tutorial/README.md
 
 Indices and tables
 ==================
