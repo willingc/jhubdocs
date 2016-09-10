@@ -6,7 +6,8 @@
 JupyterHub Federated Docs
 =========================
 
-|today|:
+:Date: |today|
+
 
 .. note:: This is a documentation development project. Please refer to the
           official docs on readthedocs.io for each JupyterHub project.
@@ -26,6 +27,8 @@ Contents
 
 **Authenticators:**
 
+Used to verify users and administrators
+
 .. toctree::
     :titlesonly:
     :maxdepth: 1
@@ -34,6 +37,8 @@ Contents
     oauthenticator/README.md
 
 **Spawners:**
+
+Used to create a single-user notebook server for a user
 
 .. toctree::
     :titlesonly:
