@@ -354,13 +354,13 @@ texinfo_documents = [
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
 
-# Read The Docs
-# on_rtd is whether we are on readthedocs.org, this line of code grabbed from docs.readthedocs.org
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-
-if not on_rtd:  # only import and set the theme if we're building docs locally
-    import cloud_sptheme
-    html_theme = 'cloud'
-    html_theme_path = [cloud_sptheme.get_theme_dir()]
-    html_theme_options = { "roottarget": "index" }
-# otherwise, readthedocs.org uses their theme by default, so no need to specify it
+# # Read The Docs
+# # on_rtd is whether we are on readthedocs.org, this line of code grabbed from docs.readthedocs.org
+# on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+#
+# if not on_rtd:  # only import and set the theme if we're building docs locally
+#     import cloud_sptheme
+#     html_theme = 'cloud'
+#     html_theme_path = [cloud_sptheme.get_theme_dir()]
+#     html_theme_options = { "roottarget": "index" }
+# # otherwise, readthedocs.org uses their theme by default, so no need to specify it
