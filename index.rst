@@ -10,28 +10,64 @@ JupyterHub Federated Docs
           official docs on readthedocs.io for each JupyterHub project.
 
 
-Contents:
+Contents
+--------
+
+**Fundamentals:**
 
 .. toctree::
-   :maxdepth: 1
+    :titlesonly:
+    :maxdepth: 1
 
-   jupyterhub/docs/source/index
-   configurable-http-proxy/README.md
-   ldapauthenticator/README.md
-   oauthenticator/README.md
-   batchspawner/README.md
-   dockerspawner/README.md
-   sudospawner/README.md
-   systemdspawner/README.md
-   jupyterhub-deploy-docker/README.md
-   jupyterhub-deploy-hpc/README.md
-   jupyterhub-deploy-teaching/docs/source/index
-   nbgrader/nbgrader/docs/source/index
+    jupyterhub/docs/source/index
+    configurable-http-proxy/README.md
 
-Indices and tables
-==================
+**Authenticators:**
 
+.. toctree::
+    :titlesonly:
+    :maxdepth: 1
+
+    ldapauthenticator/README.md
+    oauthenticator/README.md
+
+**Spawners:**
+
+.. toctree::
+    :titlesonly:
+    :maxdepth: 1
+
+    batchspawner/README.md
+    dockerspawner/README.md
+    sudospawner/README.md
+    systemdspawner/README.md
+
+**Reference Deployments:**
+
+.. toctree::
+    :titlesonly:
+    :maxdepth: 1
+
+    jupyterhub-deploy-docker/README.md
+    jupyterhub-deploy-hpc/README.md
+
+**Teaching Deployments:**
+
+.. toctree::
+    :titlesonly:
+    :maxdepth: 1
+
+    jupyterhub-deploy-teaching/docs/source/index
+    nbgrader/nbgrader/docs/source/index
+
+
+Helpful Resources
+-----------------
+
+* `Documentation <http://jhubdocs.readthedocs.io>`_
+* `Gitter <https://gitter.im/jupyterhub/jupterhub>`_
+* `Mailing list <https://groups.google.com/forum/#!forum/jupyter>`_
+* `GitHub Repository <https://github.com/jupyterhub/jupyterhub>`_
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
