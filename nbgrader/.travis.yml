@@ -1,0 +1,30 @@
+language: python
+sudo: false
+python:
+  - 2.7
+  - 3.4
+  - 3.5
+env:
+  matrix:
+    - GROUP=docs
+    - GROUP=formgrader
+    - GROUP=nbextensions
+    - GROUP=python
+addons:
+  apt:
+    packages:
+    - pandoc
+    - enchant
+before_install:
+  - pip install invoke
+  - invoke before_install --group="$GROUP" --python-version="$TRAVIS_PYTHON_VERSION"
+install:
+  - mkdir travis-phantomjs
+  - wget https://s3.amazonaws.com/travis-phantomjs/phantomjs-2.0.0-ubuntu-12.04.tar.bz2 -O $PWD/travis-phantomjs/phantomjs-2.0.0-ubuntu-12.04.tar.bz2
+  - tar -xvf $PWD/travis-phantomjs/phantomjs-2.0.0-ubuntu-12.04.tar.bz2 -C $PWD/travis-phantomjs
+  - export PATH=$PWD/travis-phantomjs:$PATH
+  - invoke install --group="$GROUP"
+script:
+  - invoke tests --group="$GROUP"
+after_success:
+  - invoke after_success --group="$GROUP"

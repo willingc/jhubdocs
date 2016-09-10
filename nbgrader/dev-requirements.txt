@@ -1,0 +1,11 @@
+pytest
+pytest-cov
+coverage
+selenium
+invoke
+sphinx
+codecov
+cov-core
+pyenchant
+sphinxcontrib-spelling
+sphinx_rtd_theme
