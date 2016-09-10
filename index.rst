@@ -25,7 +25,7 @@ Contents:
    systemdspawner/README.md
    jupyterhub-deploy-docker/README.md
    jupyterhub-deploy-hpc/README.md
-   jupyterhub-deploy-teaching/docs/index
+   jupyterhub-deploy-teaching/docs/source/index
 
 Indices and tables
 ==================
