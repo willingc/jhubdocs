@@ -8,6 +8,8 @@ Please refer to https://jupyterhub.readthedocs.io for the official documentation
 
 ## Prototype notes
 
+Proof of concept prototype rendered at https://jhubdocs.readthedocs.io/en/latest/.
+
 The prototype uses git subtree.
 
 ## Development notes
