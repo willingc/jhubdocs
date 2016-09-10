@@ -21,7 +21,7 @@ import os
 import sys
 #sys.path.insert(0, os.path.abspath('.'))
 
-import cloud_sptheme as csp
+import cloud_sptheme
 
 # Needed for conversion from markdown to html
 import recommonmark.parser
@@ -141,7 +141,7 @@ html_theme = 'cloud'
 html_theme_options = { "roottarget": "index" }
 
 # Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = [csp.get_theme_dir()]
+html_theme_path = [cloud_sptheme.get_theme_dir()]
 
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
@@ -359,8 +359,8 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 if not on_rtd:  # only import and set the theme if we're building docs locally
-    import cloud_sptheme as csp
+    import cloud_sptheme
     html_theme = 'cloud'
-    html_theme_path = [csp.get_theme_dir()]
+    html_theme_path = [cloud_sptheme.get_theme_dir()]
     html_theme_options = { "roottarget": "index" }
 # otherwise, readthedocs.org uses their theme by default, so no need to specify it
