@@ -6,6 +6,8 @@
 JupyterHub Federated Docs
 =========================
 
+|today|:
+
 .. note:: This is a documentation development project. Please refer to the
           official docs on readthedocs.io for each JupyterHub project.
 

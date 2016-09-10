@@ -51,7 +51,7 @@ source_suffix = ['.rst', '.md', '.ipynb']
 master_doc = 'index'
 
 # General information about the project.
-project = u'JupyterHub Federated Docs'
+project = u'JupyterHub Federated Documentation'
 copyright = u'2016, Carol Willing'
 author = u'Carol Willing'
 
@@ -139,7 +139,7 @@ if not on_rtd:
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
 #
-# html_title = 'JupyterHub Federated Docs v0.1'
+html_title = 'JupyterHub Federated Documentation v0.1'
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #
