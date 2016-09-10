@@ -25,9 +25,7 @@ Contents
     jupyterhub/docs/source/index
     configurable-http-proxy/README.md
 
-**Authenticators:**
-
-Used to verify users and administrators
+**Authenticators:** Used to verify users and administrators
 
 .. toctree::
     :titlesonly:
@@ -36,9 +34,7 @@ Used to verify users and administrators
     ldapauthenticator/README.md
     oauthenticator/README.md
 
-**Spawners:**
-
-Used to create a single-user notebook server for a user
+**Spawners:** Used to create a single-user notebook server for a user
 
 .. toctree::
     :titlesonly:
