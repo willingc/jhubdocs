@@ -1,4 +1,7 @@
 sphinx
 recommonmark
 cloud_sptheme
-
+nbsphinx
+jupyter_client
+ipython
+ipykernel

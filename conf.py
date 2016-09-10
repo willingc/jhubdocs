@@ -28,6 +28,8 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
+    'nbsphinx',
+    'IPython.sphinxext.ipython_console_highlighting',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -44,7 +46,7 @@ source_parsers = {
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 # source_suffix = ['.rst', '.md']
-source_suffix = ['.rst', '.md']
+source_suffix = ['.rst', '.md', '.ipynb']
 
 # The encoding of source files.
 #
@@ -126,13 +128,14 @@ pygments_style = 'sphinx'
 #
 
 if not on_rtd:
+
     import cloud_sptheme as csp
 
     html_theme = 'cloud'
     html_theme_options = { "roottarget": "index" }
 
     # Add any paths that contain custom themes here, relative to this directory.
-    html_theme_path = [cloud_sptheme.get_theme_dir()]
+    html_theme_path = [csp.get_theme_dir()]
 
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
@@ -344,3 +347,5 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
+
+nbsphinx_allow_errors = True
