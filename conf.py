@@ -21,6 +21,8 @@ import os
 import sys
 #sys.path.insert(0, os.path.abspath('.'))
 
+import cloud_sptheme as csp
+
 # Needed for conversion from markdown to html
 import recommonmark.parser
 
@@ -130,16 +132,16 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'cloud'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = { "roottarget": "index" }
 
 # Add any paths that contain custom themes here, relative to this directory.
-# html_theme_path = []
+html_theme_path = [csp.get_theme_dir()]
 
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
@@ -357,7 +359,11 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 if not on_rtd:  # only import and set the theme if we're building docs locally
-    import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+#    import sphinx_rtd_theme
+#    html_theme = 'classic'
+#     html_theme = 'scrolls'
+    html_theme = 'cloud'
+    html_theme_path = [csp.get_theme_dir()]
+    html_theme_options = { "roottarget": "index" }
+#    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # otherwise, readthedocs.org uses their theme by default, so no need to specify it
