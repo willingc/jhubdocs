@@ -21,7 +21,6 @@ Contents
 **Fundamentals:**
 
 .. toctree::
-    :titlesonly:
     :maxdepth: 1
 
     jupyterhub/docs/source/index
@@ -30,7 +29,6 @@ Contents
 **Authenticators:** Used to verify users and administrators
 
 .. toctree::
-    :titlesonly:
     :maxdepth: 1
 
     ldapauthenticator/README.md
@@ -39,7 +37,6 @@ Contents
 **Spawners:** Used to create a single-user notebook server for a user
 
 .. toctree::
-    :titlesonly:
     :maxdepth: 1
 
     batchspawner/README.md
@@ -50,7 +47,6 @@ Contents
 **Reference Deployments:**
 
 .. toctree::
-    :titlesonly:
     :maxdepth: 1
 
     jupyterhub-deploy-docker/README.md
@@ -59,7 +55,6 @@ Contents
 **Teaching Deployments:**
 
 .. toctree::
-    :titlesonly:
     :maxdepth: 1
 
     jupyterhub-deploy-teaching/docs/source/index
