@@ -24,9 +24,23 @@ Don't forget the trailing '/' in the `--prefix` option or your directory
 structure will be messed up. Do a `git log` if you are curious about what
 has been done by the `git subtree` command.
 
-TODO - document updating the subtrees when they have changes in the underlying
-repo
+### To update docs
 
+Over time, the subtrees will have changes. To update the federated docs:
+
+- Get the changes from the subtree
+
+    ```bash
+    git subtree pull --squash --prefix=systemdspawner/ systemdspawner master
+    ```
+
+- Merge the commit when prompted to do so.
+
+- When done with each changed subtree, push changes to the origin repo:
+
+    ```bash
+    git push origin master
+    ```
 
 ## Known issues
 
