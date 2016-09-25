@@ -4,6 +4,20 @@ When troubleshooting, you may see unexpected behaviors or receive an error
 message. This section provide links for identifying the cause of the
 problem and how to resolve it.
 
+[*Behavior*](#behavior)
+- JupyterHub proxy fails to start
+- sudospawner fails to run
+
+[*Errors*](#errors)
+- 500 error after spawning my single-user server
+
+[*How do I...?*](#how-do-i)
+- Use a chained SSL certificate
+- Install JupyterHub without a network connection
+- I want access to the whole filesystem, but still default users to their home directory
+- How do I increase the number of pySpark executors on YARN?
+- How do I use JupyterLab's prerelease version with JupyterHub?
+- How do I set up JupyterHub for a workshop (when users are not known ahead of time)?
 
 ## Behavior
 
@@ -178,3 +192,34 @@ similar to this one:
 [Cloudera documentation for configuring spark on YARN applications](https://www.cloudera.com/documentation/enterprise/latest/topics/cdh_ig_running_spark_on_yarn.html#spark_on_yarn_config_apps)
 provides additional information. The [pySpark configuration documentation](https://spark.apache.org/docs/0.9.0/configuration.html)
 is also helpful for programmatic configuration examples.
+
+### How do I use JupyterLab's prerelease version with JupyterHub?
+
+While JupyterLab is still under active development, we have had users
+ask about how to try out JupyterLab with JupyterHub.
+
+You need to install and enable the JupyterLab extension system-wide,
+then you can change the default URL to `/lab`. 
+
+For instance:
+
+    pip install jupyterlab
+    jupyter serverextension enable --py jupyterlab --sys-prefix
+
+The important thing is that jupyterlab is installed and enabled in the
+single-user notebook server environment. For system users, this means
+system-wide, as indicated above. For Docker containers, it means inside
+the single-user docker image, etc.
+
+In `jupyterhub_config.py`, configure the Spawner to tell the single-user
+notebook servers to default to JupyterLab:
+
+    c.Spawner.default_url = '/lab'
+
+### How do I set up JupyterHub for a workshop (when users are not known ahead of time)?
+
+1. Set up JupyterHub using OAuthenticator for GitHub authentication
+2. Configure whitelist to be an empty list in` jupyterhub_config.py`
+3. Configure admin list to have workshop leaders be listed with administrator privileges.
+
+Users will need a GitHub account to login and be authenticated by the Hub.
