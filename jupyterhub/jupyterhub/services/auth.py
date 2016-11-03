@@ -7,6 +7,7 @@ HubAuth can be used in any application, even outside tornado.
 HubAuthenticated is a mixin class for tornado handlers that should authenticate with the Hub.
 """
 
+import os
 import socket
 import time
 from urllib.parse import quote
@@ -83,19 +84,23 @@ class HubAuth(Configurable):
 
     The following config must be set:
 
-    - api_token (token for authenticating with JupyterHub API)
-    - cookie_name (the name of the cookie I should be using)
-    - login_url (the *public* ``/hub/login`` URL of the Hub)
+    - api_token (token for authenticating with JupyterHub API),
+      fetched from the JUPYTERHUB_API_TOKEN env by default.
 
     The following config MAY be set:
 
-    - api_url: the base URL of the Hub's internal API
+    - api_url: the base URL of the Hub's internal API,
+      fetched from JUPYTERHUB_API_URL by default.
     - cookie_cache_max_age: the number of seconds responses
       from the Hub should be cached.
+    - login_url (the *public* ``/hub/login`` URL of the Hub).
+    - cookie_name: the name of the cookie I should be using,
+      if different from the default (unlikely).
+
     """
 
     # where is the hub
-    api_url = Unicode('http://127.0.0.1:8081/hub/api',
+    api_url = Unicode(os.environ.get('JUPYTERHUB_API_URL') or 'http://127.0.0.1:8081/hub/api',
         help="""The base API URL of the Hub.
 
         Typically http://hub-ip:hub-port/hub/api
@@ -109,14 +114,14 @@ class HubAuth(Configurable):
         """
     ).tag(config=True)
 
-    api_token = Unicode('',
+    api_token = Unicode(os.environ.get('JUPYTERHUB_API_TOKEN', ''),
         help="""API key for accessing Hub API.
 
         Generate with `jupyterhub token [username]` or add to JupyterHub.services config.
         """
     ).tag(config=True)
 
-    cookie_name = Unicode(
+    cookie_name = Unicode('jupyterhub-services',
         help="""The name of the cookie I should be looking for"""
     ).tag(config=True)
     cookie_cache_max_age = Integer(300,
@@ -177,7 +182,7 @@ class HubAuth(Configurable):
             app_log.error("Upstream failure verifying auth token: [%i] %s", r.status_code, r.reason)
             raise HTTPError(502, "Failed to check authorization (upstream problem)")
         elif r.status_code >= 400:
-            app_log.warn("Failed to check authorization: [%i] %s", r.status_code, r.reason)
+            app_log.warning("Failed to check authorization: [%i] %s", r.status_code, r.reason)
             raise HTTPError(500, "Failed to check authorization")
         else:
             data = r.json()
@@ -222,7 +227,9 @@ class HubAuthenticated(object):
 
     - .hub_auth: A HubAuth instance
     - .hub_users: A set of usernames to allow.
-      If left unspecified or None, any Hub user will be allowed.
+      If left unspecified or None, username will not be checked.
+    - .hub_groups: A set of group names to allow.
+      If left unspecified or None, groups will not be checked.
 
     Examples::
 
@@ -238,7 +245,22 @@ class HubAuthenticated(object):
 
     """
     hub_users = None # set of allowed users
-    hub_auth = None # must be a HubAuth instance
+    hub_groups = None # set of allowed groups
+    
+    # self.hub_auth must be a HubAuth instance.
+    # If nothing specified, use default config,
+    # which will be configured with defaults
+    # based on JupyterHub environment variables for services.
+    _hub_auth = None
+    @property
+    def hub_auth(self):
+        if self._hub_auth is None:
+            self._hub_auth = HubAuth()
+        return self._hub_auth
+
+    @hub_auth.setter
+    def hub_auth(self, auth):
+        self._hub_auth = auth
 
     def check_hub_user(self, user_model):
         """Check whether Hub-authenticated user should be allowed.
@@ -252,14 +274,18 @@ class HubAuthenticated(object):
         Returns:
             user_model (dict): The user model if the user should be allowed, None otherwise.
         """
-        if self.hub_users is None:
-            # no users specified, allow any authenticated Hub user
+        if self.hub_users is None and self.hub_groups is None:
+            # no whitelist specified, allow any authenticated Hub user
             return user_model
         name = user_model['name']
-        if name in self.hub_users:
+        if self.hub_users and name in self.hub_users:
+            # user in whitelist
+            return user_model
+        elif self.hub_groups and set(user_model['groups']).union(self.hub_groups):
+            # group in whitelist
             return user_model
         else:
-            app_log.warn("Not allowing Hub user %s" % name)
+            app_log.warning("Not allowing Hub user %s" % name)
             return None
 
     def get_current_user(self):

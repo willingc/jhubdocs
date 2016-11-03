@@ -6,6 +6,7 @@
 import re
 from datetime import timedelta
 from http.client import responses
+from urllib.parse import urlparse
 
 from jinja2 import TemplateNotFound
 
@@ -221,6 +222,7 @@ class BaseHandler(RequestHandler):
         if user and user.server:
             self.clear_cookie(user.server.cookie_name, path=user.server.base_url, **kwargs)
         self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url, **kwargs)
+        self.clear_cookie('jupyterhub-services', path=url_path_join(self.base_url, 'services'))
 
     def _set_user_cookie(self, user, server):
         # tornado <4.2 have a bug that consider secure==True as soon as
@@ -241,7 +243,10 @@ class BaseHandler(RequestHandler):
 
     def set_service_cookie(self, user):
         """set the login cookie for services"""
-        self._set_user_cookie(user, self.service_server)
+        self._set_user_cookie(user, orm.Server(
+            cookie_name='jupyterhub-services',
+            base_url=url_path_join(self.base_url, 'services')
+        ))
 
     def set_server_cookie(self, user):
         """set the login cookie for the single-user server"""
@@ -262,7 +267,7 @@ class BaseHandler(RequestHandler):
             self.set_server_cookie(user)
 
         # set single cookie for services
-        if self.db.query(orm.Service).first():
+        if self.db.query(orm.Service).filter(orm.Service.server != None).first():
             self.set_service_cookie(user)
 
         # create and set a new cookie token for the hub
@@ -322,10 +327,13 @@ class BaseHandler(RequestHandler):
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)
         except gen.TimeoutError:
-            if user.spawn_pending:
+            # waiting_for_response indicates server process has started,
+            # but is yet to become responsive.
+            if not user.waiting_for_response:
                 # still in Spawner.start, which is taking a long time
-                # we shouldn't poll while spawn_pending is True
-                self.log.warning("User %s server is slow to start", user.name)
+                # we shouldn't poll while spawn is incomplete.
+                self.log.warning("User %s's server is slow to start (timeout=%s)",
+                    user.name, self.slow_spawn_timeout)
                 # schedule finish for when the user finishes spawning
                 IOLoop.current().add_future(f, finish_user_spawn)
             else:
@@ -335,7 +343,9 @@ class BaseHandler(RequestHandler):
                 if status is None:
                     # hit timeout, but server's running. Hope that it'll show up soon enough,
                     # though it's possible that it started at the wrong URL
-                    self.log.warning("User %s server is slow to become responsive", user.name)
+                    self.log.warning("User %s's server is slow to become responsive (timeout=%s)",
+                        user.name, self.slow_spawn_timeout)
+                    self.log.debug("Expecting server for %s at: %s", user.name, user.server.url)
                     # schedule finish for when the user finishes spawning
                     IOLoop.current().add_future(f, finish_user_spawn)
                 else:
@@ -491,6 +501,21 @@ class UserSpawnHandler(BaseHandler):
     def get(self, name, user_path):
         current_user = self.get_current_user()
         if current_user and current_user.name == name:
+            # If people visit /user/:name directly on the Hub,
+            # the redirects will just loop, because the proxy is bypassed.
+            # Try to check for that and warn,
+            # though the user-facing behavior is unchainged
+            host_info = urlparse(self.request.full_url())
+            port = host_info.port
+            if not port:
+                port = 443 if host_info.scheme == 'https' else 80
+            if port != self.proxy.public_server.port and port == self.hub.server.port:
+                self.log.warning("""
+                    Detected possible direct connection to Hub's private ip: %s, bypassing proxy.
+                    This will result in a redirect loop.
+                    Make sure to connect to the proxied public URL %s
+                    """, self.request.full_url(), self.proxy.public_server.url)
+
             # logged in as correct user, spawn the server
             if current_user.spawner:
                 if current_user.spawn_pending:

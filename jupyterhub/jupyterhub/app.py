@@ -94,7 +94,7 @@ flags = {
         "disable persisting state database to disk"
     ),
     'no-ssl': ({'JupyterHub': {'confirm_no_ssl': True}},
-        "Allow JupyterHub to run without SSL (SSL termination should be happening elsewhere)."
+        "[DEPRECATED in 0.7: does nothing]"
     ),
 }
 
@@ -180,7 +180,7 @@ class JupyterHub(Application):
 
     generate default config file:
 
-        jupyterhub --generate-config -f /etc/jupyterhub/jupyterhub.py
+        jupyterhub --generate-config -f /etc/jupyterhub/jupyterhub_config.py
 
     spawn the server on 10.0.1.2:443 with https:
 
@@ -252,9 +252,7 @@ class JupyterHub(Application):
         return [os.path.join(self.data_files_path, 'templates')]
 
     confirm_no_ssl = Bool(False,
-        help="""Confirm that JupyterHub should be run without SSL.
-        This is **NOT RECOMMENDED** unless SSL termination is being handled by another layer.
-        """
+        help="""DEPRECATED: does nothing"""
     ).tag(config=True)
     ssl_key = Unicode('',
         help="""Path to SSL key file for the public facing interface of the proxy
@@ -406,7 +404,7 @@ class JupyterHub(Application):
     ).tag(config=True)
     @observe('api_tokens')
     def _deprecate_api_tokens(self, change):
-        self.log.warn("JupyterHub.api_tokens is pending deprecation."
+        self.log.warning("JupyterHub.api_tokens is pending deprecation."
             "  Consider using JupyterHub.service_tokens."
             "  If you have a use case for services that identify as users,"
             " let us know: https://github.com/jupyterhub/jupyterhub/issues"
@@ -544,7 +542,7 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     statsd_host = Unicode(
-        help="Host to send statds metrics to"
+        help="Host to send statsd metrics to"
     ).tag(config=True)
 
     statsd_port = Integer(
@@ -1060,11 +1058,6 @@ class JupyterHub(Application):
 
         for orm_user in db.query(orm.User):
             self.users[orm_user.id] = user = User(orm_user, self.tornado_settings)
-            if not user.state:
-                # without spawner state, server isn't valid
-                user.server = None
-                user_summaries.append(_user_summary(user))
-                continue
             self.log.debug("Loading state for %s from db", user.name)
             spawner = user.spawner
             status = yield spawner.poll()
@@ -1112,7 +1105,7 @@ class JupyterHub(Application):
         if self.proxy.public_server.is_up() or self.proxy.api_server.is_up():
             # check for *authenticated* access to the proxy (auth token can change)
             try:
-                yield self.proxy.get_routes()
+                routes = yield self.proxy.get_routes()
             except (HTTPError, OSError, socket.error) as e:
                 if isinstance(e, HTTPError) and e.code == 403:
                     msg = "Did CONFIGPROXY_AUTH_TOKEN change?"
@@ -1124,6 +1117,7 @@ class JupyterHub(Application):
                 return
             else:
                 self.log.info("Proxy already running at: %s", self.proxy.public_server.bind_url)
+                yield self.proxy.check_routes(self.users, self._service_map, routes)
             self.proxy_process = None
             return
 
@@ -1151,18 +1145,10 @@ class JupyterHub(Application):
                 '--statsd-port', str(self.statsd_port),
                 '--statsd-prefix', self.statsd_prefix + '.chp'
             ])
-        # Require SSL to be used or `--no-ssl` to confirm no SSL on
+        # Warn if SSL is not used
         if ' --ssl' not in ' '.join(cmd):
-            if self.confirm_no_ssl:
-                self.log.warning("Running JupyterHub without SSL."
-                    " There better be SSL termination happening somewhere else...")
-            else:
-                self.log.error(
-                    "Refusing to run JupyterHub without SSL."
-                    " If you are terminating SSL in another layer,"
-                    " pass --no-ssl to tell JupyterHub to allow the proxy to listen on HTTP."
-                )
-                self.exit(1)
+            self.log.warning("Running JupyterHub without SSL."
+                "  I hope there is SSL termination happening somewhere else...")
         self.log.info("Starting proxy @ %s", self.proxy.public_server.bind_url)
         self.log.debug("Proxy cmd: %s", cmd)
         try:
@@ -1308,9 +1294,16 @@ class JupyterHub(Application):
 
     @gen.coroutine
     def cleanup(self):
-        """Shutdown our various subprocesses and cleanup runtime files."""
+        """Shutdown managed services and various subprocesses. Cleanup runtime files."""
 
         futures = []
+
+        managed_services = [ s for s in self._service_map.values() if s.managed ]
+        if managed_services:
+            self.log.info("Cleaning up %i services...", len(managed_services))
+            for service in managed_services:
+                futures.append(service.stop())
+
         if self.cleanup_servers:
             self.log.info("Cleaning up single-user servers...")
             # request (async) process termination
@@ -1320,7 +1313,7 @@ class JupyterHub(Application):
         else:
             self.log.info("Leaving single-user servers running")
 
-        # clean up proxy while SUS are shutting down
+        # clean up proxy while single-user servers are shutting down
         if self.cleanup_proxy:
             if self.proxy_process:
                 self.log.info("Cleaning up proxy[%i]...", self.proxy_process.pid)
@@ -1353,6 +1346,11 @@ class JupyterHub(Application):
 
     def write_config_file(self):
         """Write our default config to a .py config file"""
+        config_file_dir = os.path.dirname(os.path.abspath(self.config_file))
+        if not os.path.isdir(config_file_dir):
+            self.exit("{} does not exist. The destination directory must exist before generating config file.".format(
+                config_file_dir,
+            ))
         if os.path.exists(self.config_file) and not self.answer_yes:
             answer = ''
             def ask():
@@ -1438,6 +1436,8 @@ class JupyterHub(Application):
             self.exit(1)
         
         for service_name, service in self._service_map.items():
+            if not service.managed:
+                continue
             try:
                 service.start()
             except Exception as e:
