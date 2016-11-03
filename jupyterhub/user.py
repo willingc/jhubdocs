@@ -99,6 +99,7 @@ class User(HasTraits):
     spawner = None
     spawn_pending = False
     stop_pending = False
+    waiting_for_response = False
     
     @property
     def authenticator(self):
@@ -161,9 +162,9 @@ class User(HasTraits):
     @property
     def proxy_path(self):
         if self.settings.get('subdomain_host'):
-            return url_path_join('/' + self.domain, self.server.base_url)
+            return url_path_join('/' + self.domain, self.base_url)
         else:
-            return self.server.base_url
+            return self.base_url
     
     @property
     def domain(self):
@@ -258,7 +259,7 @@ class User(HasTraits):
         self.state = spawner.get_state()
         self.last_activity = datetime.utcnow()
         db.commit()
-        self.spawn_pending = False
+        self.waiting_for_response = True
         try:
             yield self.server.wait_up(http=True, timeout=spawner.http_timeout)
         except Exception as e:
@@ -285,6 +286,9 @@ class User(HasTraits):
                 ), exc_info=True)
             # raise original TimeoutError
             raise e
+        finally:
+            self.waiting_for_response = False
+            self.spawn_pending = False
         return self
 
     @gen.coroutine
