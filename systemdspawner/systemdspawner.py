@@ -2,6 +2,7 @@ import os
 import pwd
 import time
 import subprocess
+import shlex
 from traitlets import Bool, Int, Unicode, List
 from tornado import gen
 
@@ -11,25 +12,15 @@ from jupyterhub.utils import random_port
 
 class SystemdSpawner(Spawner):
     mem_limit = Unicode(
-        '',
-        help='Memory limit for each user. Set to \'\' (default) for no limits. Uses suffixes that are recognized by Systemd (M, G, etc)'
+        None,
+        help='Memory limit for each user. Set to `None` for no limits. Uses suffixes that are recognized by Systemd (M, G, etc)',
+        allow_none=True,
     ).tag(config=True)
 
     cpu_limit = Int(
-        0,
-        help='CPU limit for each user. 100 means 1 full CPU, 30 is 30% of 1 CPU, 200 is 2 CPUs, etc. Set to 0 (default) for no limits'
-    ).tag(config=True)
-
-    run_as_system_users = Bool(
-        True,
-        help='Run each service with the uid of the user it is authenticated as'
-    ).tag(config=True)
-
-    # FIXME: Do not allow enabling this for systemd versions < 227,
-    # since that is when it was introduced.
-    isolate_tmp = Bool(
-        False,
-        help='Give each notebook user their own /tmp, isolated from the system & each other'
+        None,
+        help='CPU limit for each user. 100 means 1 full CPU, 30 is 30% of 1 CPU, 200 is 2 CPUs, etc. Set to `None` (default) for no limits',
+        allow_none=True,
     ).tag(config=True)
 
     user_workingdir = Unicode(
@@ -44,17 +35,66 @@ class SystemdSpawner(Spawner):
 
     extra_paths = List(
         [],
-        help='Extra paths to add to the $PATH environment variable. {USERNAME} and {USERID} are expanded',
+        help='Extra paths to prepend to the $PATH environment variable. {USERNAME} and {USERID} are expanded',
     ).tag(config=True)
 
     unit_name_template = Unicode(
-        'jupyter-{USERID}-singleuser',
+        'jupyter-{USERNAME}-singleuser',
         help='Template to use to make the systemd service names. {USERNAME} and {USERID} are expanded}'
     ).tag(config=True)
 
-    @property
-    def unit_name(self):
-        return self._expand_user_vars(self.unit_name_template)
+    # FIXME: Do not allow enabling this for systemd versions < 227,
+    # since that is when it was introduced.
+    isolate_tmp = Bool(
+        False,
+        help='Give each notebook user their own /tmp, isolated from the system & each other'
+    ).tag(config=True)
+
+    isolate_devices = Bool(
+        False,
+        help='Give each notebook user their own /dev, with a very limited set of devices mounted'
+    ).tag(config=True)
+
+    disable_user_sudo = Bool(
+        False,
+        help='Set to true to disallow becoming root (or any other user) via sudo or other means from inside the notebook',
+    ).tag(config=True)
+
+    readonly_paths = List(
+        None,
+        allow_none=True,
+        help='List of paths that should be marked readonly from the user notebook. Subpaths can be overriden by setting readwrite_paths',
+    ).tag(config=True)
+
+    readwrite_paths = List(
+        None,
+        allow_none=True,
+        help='List of paths that should be marked read-write from the user notebook. Usually used to make a subpath of a readonly path writeable',
+    ).tag(config=True)
+
+    use_sudo = Bool(
+        False,
+        help="""
+        Use sudo to run systemd-run / systemctl commands.
+
+        Useful if you want to run jupyterhub as a non-root user and have set up sudo rules to allow
+        it to call systemd-run / systemctl commands
+        """
+    ).tag(config=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # All traitlets configurables are configured by now
+        self.systemctl_cmd = ['/bin/systemctl']
+        self.systemd_run_cmd = ['/usr/bin/systemd-run']
+        if self.use_sudo:
+            self.systemctl_cmd.insert(0, '/usr/bin/sudo')
+            self.systemd_run_cmd.insert(0, '/usr/bin/sudo')
+
+        self.unit_name = self._expand_user_vars(self.unit_name_template)
+
+        self.log.debug('user:%s Initialized spawner with unit %s', self.user.name, self.unit_name)
+
 
     def _expand_user_vars(self, string):
         """
@@ -69,9 +109,39 @@ class SystemdSpawner(Spawner):
             USERID=self.user.id
         )
 
+    def get_state(self):
+        """
+        Save state required to reconstruct spawner from scratch
+
+        We save the unit name, just in case the unit template was changed
+        between a restart. We do not want to lost the previously launched
+        events.
+
+        JupyterHub before 0.7 also assumed your notebook was dead if it
+        saved no state, so this helps with that too!
+        """
+        state = super().get_state()
+        state['unit_name'] = self.unit_name
+        return state
+
+    def load_state(self, state):
+        """
+        Load state from storage required to reinstate this user's pod
+
+        This runs after __init__, so we can override it with saved unit name
+        if needed. This is useful primarily when you change the unit name template
+        between restarts.
+
+        JupyterHub before 0.7 also assumed your notebook was dead if it
+        saved no state, so this helps with that too!
+        """
+        if 'unit_name' in state:
+            self.unit_name = state['unit_name']
+
     @gen.coroutine
     def start(self):
         self.port = random_port()
+        self.log.debug('user:% Using port %s to start spawning for user %s', self.user.name, self.port)
 
         # if a previous attempt to start the service for this user was made and failed,
         # systemd keeps the service around in 'failed' state. This will prevent future
@@ -79,40 +149,38 @@ class SystemdSpawner(Spawner):
         # (since if it fails & is deleted immediately, we will lose state info), in our
         # case it is ok to reset it and move on when trying to start again.
         try:
-            if subprocess.check_output([
-                '/bin/systemctl',
+            if subprocess.check_output(self.systemctl_cmd + [
                 'is-failed',
                 self.unit_name
             ]).decode('utf-8').strip() == 'failed':
-                subprocess.check_output([
-                    '/bin/systemctl',
+                subprocess.check_output(self.systemctl_cmd + [
                     'reset-failed',
                     self.unit_name
                 ])
-                self.log.info('Found unit {unit} in failed state, reset state to inactive'.format(
-                    unit=self.unit_name)
-                )
+                self.log.info('user:%s Unit %s in failed state, resetting', self.user.name, self.unit_name)
         except subprocess.CalledProcessError as e:
             # This is returned when the unit is *not* in failed state. bah!
             pass
         env = self.get_env()
 
-        cmd = ['/usr/bin/systemd-run']
+        cmd = self.systemd_run_cmd[:]
 
         cmd.extend(['--unit', self.unit_name])
-        if self.run_as_system_users:
-            try:
-                pwnam = pwd.getpwnam(self.user.name)
-            except KeyError:
-                self.log.exception('No user named %s found in the system' % self.user.name)
-                raise
-            cmd.extend(['--uid', str(pwnam.pw_uid), '--gid', str(pwnam.pw_gid)])
+        try:
+            pwnam = pwd.getpwnam(self.user.name)
+        except KeyError:
+            self.log.exception('No user named %s found in the system' % self.user.name)
+            raise
+        cmd.extend(['--uid', str(pwnam.pw_uid), '--gid', str(pwnam.pw_gid)])
 
         if self.isolate_tmp:
             cmd.extend(['--property=PrivateTmp=yes'])
 
+        if self.isolate_devices:
+            cmd.extend(['--property=PrivateDevices=yes'])
+
         if self.extra_paths:
-            env['PATH'] = '{curpath}:{extrapath}'.format(
+            env['PATH'] = '{extrapath}:{curpath}'.format(
                 curpath=env['PATH'],
                 extrapath=':'.join(
                     [self._expand_user_vars(p) for p in self.extra_paths]
@@ -122,20 +190,16 @@ class SystemdSpawner(Spawner):
         for key, value in env.items():
             cmd.append('--setenv={key}={value}'.format(key=key, value=value))
 
-        cmd.append('--property=WorkingDirectory={workingdir}'.format(
-            workingdir=self._expand_user_vars(self.user_workingdir)
-        ))
-
         cmd.append('--setenv=SHELL={shell}'.format(shell=self.default_shell))
 
-        if self.mem_limit != '':
+        if self.mem_limit is not None:
             # FIXME: Detect & use proper properties for v1 vs v2 cgroups
             cmd.extend([
                 '--property=MemoryAccounting=yes',
                 '--property=MemoryLimit={mem}'.format(mem=self.mem_limit),
             ])
 
-        if self.cpu_limit != 0:
+        if self.cpu_limit is not None:
             # FIXME: Detect & use proper properties for v1 vs v2 cgroups
             # FIXME: Make sure that the kernel supports CONFIG_CFS_BANDWIDTH
             #        otherwise this doesn't have any effect.
@@ -144,38 +208,62 @@ class SystemdSpawner(Spawner):
                 '--property=CPUQuota={quota}%'.format(quota=self.cpu_limit)
             ])
 
-        cmd.extend([self._expand_user_vars(c) for c in  self.cmd])
-        cmd.extend(self.get_args())
+        if self.disable_user_sudo:
+            cmd.append('--property=NoNewPrivileges=yes')
 
-        self.log.debug('Running systemd-run with: %s' % ' '.join(cmd))
+        if self.readonly_paths is not None:
+            cmd.extend([
+                self._expand_user_vars('--property=ReadOnlyDirectories=-{path}'.format(path=path))
+                for path in self.readonly_paths
+            ])
+
+        if self.readwrite_paths is not None:
+            cmd.extend([
+                self._expand_user_vars('--property=ReadWriteDirectories={path}'.format(path=path))
+                for path in self.readwrite_paths
+            ])
+
+        # We unfortunately have to resort to doing cd with bash, since WorkingDirectory property
+        # of systemd units can't be set for transient units via systemd-run until systemd v227.
+        # Centos 7 has systemd 219, and will probably never upgrade - so we need to support them.
+        bash_cmd = [
+            '/bin/bash',
+            '-c',
+            "cd {wd} && exec {cmd} {args}".format(
+                wd=shlex.quote(self._expand_user_vars(self.user_workingdir)),
+                cmd=' '.join([shlex.quote(self._expand_user_vars(c)) for c in self.cmd]),
+                args=' '.join([shlex.quote(a) for a in self.get_args()])
+            )
+        ]
+        cmd.extend(bash_cmd)
+
+        self.log.debug('user:%s Running systemd-run with: %s', self.user.name, ' '.join(cmd))
         subprocess.check_output(cmd)
 
         for i in range(self.start_timeout):
             is_up = yield self.poll()
             if is_up is None:
                 return (self.ip or '127.0.0.1', self.port)
-            time.sleep(1)
+            yield gen.sleep(1)
 
         return None
 
     @gen.coroutine
     def stop(self):
-        subprocess.check_output([
-            '/bin/systemctl',
+        subprocess.check_output(self.systemctl_cmd + [
             'stop',
             self.unit_name
         ])
 
     @gen.coroutine
     def poll(self):
-        if hasattr(self, 'unit_name'):
-            try:
-                if subprocess.check_output([
-                    '/bin/systemctl',
-                    'is-active',
-                    self.unit_name
-                ]).decode('utf-8').strip() == 'active':
-                    return None
-            except subprocess.CalledProcessError as e:
-                return e.returncode
-        return 0
+        try:
+            if subprocess.check_call(self.systemctl_cmd + [
+                'is-active',
+                self.unit_name
+            ], stdout=open('/dev/null', 'w'), stderr=open('/dev/null', 'w')) == 0:
+                self.log.debug('user:%s unit %s is active', self.user.name, self.unit_name)
+                return None
+        except subprocess.CalledProcessError as e:
+            self.log.debug('user:%s unit %s is not active', self.user.name, self.unit_name)
+            return e.returncode
