@@ -2,7 +2,7 @@ alabaster==0.7.9
 Babel==2.3.4
 backports-abc==0.4
 backports.shutil-get-terminal-size==1.0.0
-certifi==2016.8.31
+certifi==2022.12.7
 cloud-sptheme==1.7.1
 CommonMark==0.5.4
 configparser==3.5.0
